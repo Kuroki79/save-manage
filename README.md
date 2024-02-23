@@ -1,46 +1,14 @@
-# save-manage
+# save-manage (存档管理器)
 
-This template should help get you started developing with Vue 3 in Vite.
+> 一个存档管理工具，支持备份和还原，还计划添加更多功能。
 
-## Recommended IDE Setup
+## 功能
+- [x] 指定存档目录的备份和还原
+- [ ] 软件配置和存档的云备份
+- [ ] 存档目录指定文件/文件夹备份
+- [ ] 建立规则文件以支持自动扫描存档目录来添加配置
+- [x] 暂时就想到这些...
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+## 许可
 
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
-
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
-
-1. Disable the built-in TypeScript Extension
-    1) Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-    2) Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-```sh
-yarn
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-yarn dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-yarn build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-yarn lint
-```
+`save-manage` 是在 GPL-3.0 许可下许可的开源软件。
