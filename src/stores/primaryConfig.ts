@@ -8,6 +8,8 @@ export const usePrimaryConfigStore = defineStore('primaryConfig', {
     themeColor: 'primary',
     saveFolder: '',
     saveList: [] as SaveListInter,
+    globalSnackBarText: '' as string,
+    globalSnackBar: false as boolean
   }),
   actions: {
     addSaveProfile(data: SaveItemInter) {
@@ -25,11 +27,22 @@ export const usePrimaryConfigStore = defineStore('primaryConfig', {
       const targetIndex = this.saveList.findIndex(item => item.id === id);
       this.saveList.splice(targetIndex, 1);
     },
-    deleteHistoryBackup(id: string | string[], dateTime: string) {
+    deleteHistoryBackup(id: string | string[], createTime: string) {
       const targetProfileIndex = this.saveList.findIndex(item => item.id === id);
-      const targetHistoryIndex = this.saveList[targetProfileIndex].historyBackupList.findIndex(item => item.createTime === dateTime);
+      const targetHistoryIndex = this.saveList[targetProfileIndex].historyBackupList.findIndex(item => item.createTime === createTime);
       this.saveList[targetProfileIndex].historyBackupList.splice(targetHistoryIndex, 1);
+    },
+    changeBackupNote(text: string, id: string | string[], createTime: string) {
+      const targetProfileIndex = this.saveList.findIndex(item => item.id === id);
+      const targetHistoryIndex = this.saveList[targetProfileIndex].historyBackupList.findIndex(item => item.createTime === createTime);
+      this.saveList[targetProfileIndex].historyBackupList[targetHistoryIndex].note = text;
+    },
+    changeSnackTextThenShow (text: string) {
+      this.globalSnackBarText = text;
+      this.globalSnackBar = true;
     }
   },
-  persist: true
+  persist: {
+    paths: ['themeColor', 'saveFolder', 'saveList']
+  }
 });

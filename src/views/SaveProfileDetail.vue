@@ -10,7 +10,7 @@
             <v-text-field v-model="newProfileConfig.name" label="配置名称" required></v-text-field>
           </v-col>
           <v-col cols="12">
-            <v-text-field v-model="newProfileConfig.dirName" hint="留空时以配置名称为主" persistent-hint
+            <v-text-field v-model="newProfileConfig.dirName" hint="修改该值后保存会影响到目录名称" persistent-hint
               label="备份文件夹名称"></v-text-field>
           </v-col>
           <v-col cols="12">
@@ -21,12 +21,8 @@
             <v-text-field type="number" v-model="newProfileConfig.autoBackupTime" label="自动备份时间间隔" hint="单位为小时"
               persistent-hint required disabled></v-text-field>
           </v-col>
-          <v-col cols="12" sm="6" md="4">
-            <v-switch :color="primaryConfigStore.themeColor" v-model="newProfileConfig.isContainGame"
-              label="存档路径中是否包含游戏文件" disabled></v-switch>
-          </v-col>
           <v-col cols="12" sm="8" md="6">
-            <v-switch :color="primaryConfigStore.themeColor" v-model="newProfileConfig.isOnlyOverwrite"
+            <v-switch :color="themeColor" v-model="newProfileConfig.isOnlyOverwrite"
               :label="`存档还原方式：${newProfileConfig.isOnlyOverwrite ? '仅覆盖' : '清空目录后覆盖'}`"></v-switch>
           </v-col>
         </v-row>
@@ -43,11 +39,11 @@
     <v-card-title>
       <span class="text-h5">历史备份</span>
     </v-card-title>
-    <v-list lines="two">
-      <v-list-item v-for="item in primaryConfigStore.saveList[targetProfileIndex].historyBackupList"
-        :key="item.createTime" :title="item.createTime" :subtitle="item.note">
+    <v-list v-if="saveList[targetProfileIndex].historyBackupList.length !== 0" lines="two">
+      <v-list-item v-for="item in saveList[targetProfileIndex].historyBackupList" :key="item.createTime"
+        :title="item.createTime" :subtitle="item.note">
         <template v-slot:prepend>
-          <v-avatar :color="primaryConfigStore.themeColor">
+          <v-avatar :color="themeColor">
             <v-icon color="white">mdi-history</v-icon>
           </v-avatar>
         </template>
@@ -55,10 +51,49 @@
         <template v-slot:append>
           <v-tooltip text="删除历史备份">
             <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" @click="() => deleteHistoryBackup(item.createTime)" color="red-accent-4"
+              <v-btn v-bind="props" @click="() => deleteBackup(item.createTime)" color="red-accent-4"
                 icon="mdi-delete-forever" variant="text"></v-btn>
             </template>
           </v-tooltip>
+          <v-menu v-model="noteEditMenu" :close-on-content-click="false">
+            <template v-slot:activator="{ props: noteEditMenu }">
+              <v-tooltip text="修改备注">
+                <template v-slot:activator="{ props: tooltip }">
+                  <v-btn v-bind="mergeProps(noteEditMenu, tooltip)" @click="noteEditMenu.value = true" color="blue"
+                    icon="mdi-text-box-edit-outline" variant="text"></v-btn>
+                </template>
+              </v-tooltip>
+            </template>
+
+            <v-card min-width="300">
+              <v-card-title class="text-h5">
+                修改备注
+              </v-card-title>
+
+              <v-divider></v-divider>
+
+              <v-card-text>
+                <v-container>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-text-field v-model="noteEditText" label="备注"></v-text-field>
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </v-card-text>
+
+              <v-card-actions>
+                <v-spacer></v-spacer>
+
+                <v-btn variant="text" @click="noteEditMenu = false">
+                  取消
+                </v-btn>
+                <v-btn color="primary" variant="text" @click="() => editBackupNote(item.createTime)">
+                  保存
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-menu>
           <v-tooltip text="还原备份">
             <template v-slot:activator="{ props }">
               <v-btn v-bind="props" @click="() => restoreBackup(item.createTime)" color="blue" icon="mdi-backup-restore"
@@ -68,6 +103,8 @@
         </template>
       </v-list-item>
     </v-list>
+
+    <placeholding-message message="暂无历史备份" icon-size="48" font-size="20px" v-else />
   </v-card>
   <div class="control-area">
     <v-tooltip text="删除存档配置">
@@ -77,7 +114,7 @@
     </v-tooltip>
     <v-tooltip text="新建历史备份">
       <template v-slot:activator="{ props }">
-        <v-btn v-bind="props" @click="createBackupDialog = true" :color="primaryConfigStore.themeColor"
+        <v-btn v-bind="props" @click="createBackupDialog = true" :color="themeColor"
           icon="mdi-content-save-plus"></v-btn>
       </template>
     </v-tooltip>
@@ -93,7 +130,7 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn :color="primaryConfigStore.themeColor" variant="text" @click="confirmDialog = false">
+        <v-btn :color="themeColor" variant="text" @click="confirmDialog = false">
           否
         </v-btn>
         <v-btn color="red-darken-2" variant="text" @click="deleteProfile">
@@ -119,7 +156,7 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn :color="primaryConfigStore.themeColor" variant="text" @click="createBackupDialog = false">
+        <v-btn :color="themeColor" variant="text" @click="createBackupDialog = false">
           否
         </v-btn>
         <v-btn color="red-darken-2" variant="text" @click="createNewBackup">
@@ -128,95 +165,124 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
-  <v-snackbar :timeout="3000" v-model="snackbar">
-    {{ snackBarText }}
-  </v-snackbar>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { useIpcRenderer } from '@vueuse/electron';
+import { ref, reactive, mergeProps } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
+import { storeToRefs } from 'pinia';
 import { type SaveItemInter } from '../types/index';
 import { usePrimaryConfigStore } from '../stores/primaryConfig';
+import PlaceholdingMessage from '@/components/placeholdingMessage.vue';
 
 const route = useRoute();
 const router = useRouter();
 
-const primaryConfigStore = usePrimaryConfigStore();
-
-const ipcRenderer = useIpcRenderer();
+const { saveList, saveFolder, themeColor } = storeToRefs(usePrimaryConfigStore());
+const {
+  changeBackupNote,
+  changeSnackTextThenShow,
+  addHistoryBackup,
+  deleteHistoryBackup,
+  deleteSaveProfile
+} = usePrimaryConfigStore();
 
 const confirmDialog = ref<boolean>(false);
 
 const createBackupDialog = ref<boolean>(false);
 
-const snackbar = ref<boolean>(false);
-
 const isDeleteFile = ref<boolean>(false);
+
+const noteEditMenu = ref<boolean>(false);
 
 const backupNote = ref<string>('');
 
-const snackBarText = ref<string>('');
+const noteEditText = ref<string>('');
 
-const targetProfileIndex: number = primaryConfigStore.saveList.findIndex(item => item.id === route.params.id);
+const targetProfileIndex: number = saveList.value.findIndex(item => item.id === route.params.id);
 
-const initialProfile = (): SaveItemInter => (primaryConfigStore.saveList[targetProfileIndex]);
+const initialProfile = (): SaveItemInter => (saveList.value[targetProfileIndex]);
 
 let newProfileConfig = reactive<SaveItemInter>(initialProfile());
 
-ipcRenderer.on('file-operation', (e, msg) => {
-  snackBarText.value = msg;
-  snackbar.value = true;
-});
-
-ipcRenderer.on('selectedBackupFolderAlter', (e, files) => {
-  console.log(files);
-  newProfileConfig.location = files[0];
-});
-
-function selectBackupFolder() {
-  ipcRenderer.send('chose-directory-dialog', { prop: 'openDirectory', action: 'selectedBackupFolderAlter' });
+async function selectBackupFolder() {
+  const filePath = await window.electronAPI.selectFolder();
+  if (filePath) {
+    newProfileConfig.location = filePath;
+  }
 }
 
-function saveProfile() {
-  primaryConfigStore.saveList[targetProfileIndex].name = newProfileConfig.name;
-  primaryConfigStore.saveList[targetProfileIndex].location = newProfileConfig.location;
-  primaryConfigStore.saveList[targetProfileIndex].dirName = newProfileConfig.dirName;
-  primaryConfigStore.saveList[targetProfileIndex].autoBackupTime = newProfileConfig.autoBackupTime;
-  primaryConfigStore.saveList[targetProfileIndex].isContainGame = newProfileConfig.isContainGame;
-  primaryConfigStore.saveList[targetProfileIndex].isOnlyOverwrite = newProfileConfig.isOnlyOverwrite;
+async function saveProfile() {
+  saveList.value[targetProfileIndex].name = newProfileConfig.name;
+  saveList.value[targetProfileIndex].location = newProfileConfig.location;
 
-  snackBarText.value = '配置已保存';
-  snackbar.value = true;
+  if (saveList.value[targetProfileIndex].dirName !== newProfileConfig.dirName) {
+    const result = await window.electronAPI.renameAction({ basePath: saveFolder.value, oldName: saveList.value[targetProfileIndex].dirName, newName: newProfileConfig.dirName });
+    console.log(result);
+    saveList.value[targetProfileIndex].dirName = newProfileConfig.dirName;
+  }
+
+  saveList.value[targetProfileIndex].autoBackupTime = newProfileConfig.autoBackupTime;
+  saveList.value[targetProfileIndex].isOnlyOverwrite = newProfileConfig.isOnlyOverwrite;
+
+  changeSnackTextThenShow('配置已保存');
 }
 
-function createNewBackup() {
+async function createNewBackup() {
   const createTime = dayjs().format('YYYYMMDD HHmmss');
-  primaryConfigStore.addHistoryBackup(newProfileConfig.id, { createTime, note: backupNote.value });
-  ipcRenderer.send('create-backup', { createTime, basePath: primaryConfigStore.saveFolder, folderName: newProfileConfig.name, source: newProfileConfig.location });
+
+  const result = await window.electronAPI.createBackup({
+    createTime,
+    basePath: saveFolder.value,
+    targetFolderName: newProfileConfig.dirName,
+    sourcePath: newProfileConfig.location
+  });
+
+  changeSnackTextThenShow(result);
+
+  if (result !== '创建备份成功') return;
+
+  addHistoryBackup(newProfileConfig.id, { createTime, note: backupNote.value });
+
   backupNote.value = '';
   createBackupDialog.value = false;
 }
 
-function restoreBackup(createTime: string) {
-  if (newProfileConfig.isOnlyOverwrite) {
-    ipcRenderer.send('restore-backup', { createTime, basePath: primaryConfigStore.saveFolder, folderName: newProfileConfig.name, destination: newProfileConfig.location });
-  } else {
-    ipcRenderer.send('clean-folder-then-restore', { createTime, basePath: primaryConfigStore.saveFolder, folderName: newProfileConfig.name, destination: newProfileConfig.location });
+async function restoreBackup(createTime: string) {
+  let msg = await window.electronAPI.restoreBackup({
+    createTime,
+    basePath: saveFolder.value,
+    folderName: newProfileConfig.dirName,
+    destination: newProfileConfig.location,
+    isOnlyOverwrite: newProfileConfig.isOnlyOverwrite
+  });
+
+  changeSnackTextThenShow(msg);
+}
+
+function editBackupNote(createTime: string) {
+  changeBackupNote(noteEditText.value, newProfileConfig.id, createTime);
+  noteEditMenu.value = false;
+  noteEditText.value = '';
+}
+
+async function deleteBackup(createTime: string) {
+  const msg = await window.electronAPI.deleteFolder([saveFolder.value, newProfileConfig.dirName, createTime]);
+  changeSnackTextThenShow(msg);
+  if (msg === '目录删除成功') {
+    deleteHistoryBackup(newProfileConfig.id, createTime);
   }
 }
 
-function deleteHistoryBackup(createTime: string) {
-  primaryConfigStore.deleteHistoryBackup(newProfileConfig.id, createTime);
-  ipcRenderer.send('delete-backup', { createTime, basePath: primaryConfigStore.saveFolder, folderName: newProfileConfig.name });
-}
-
-function deleteProfile() {
-  primaryConfigStore.deleteSaveProfile(newProfileConfig.id);
+async function deleteProfile() {
+  deleteSaveProfile(newProfileConfig.id);
   if (isDeleteFile.value) {
-    ipcRenderer.send('delete-profile', { basePath: primaryConfigStore.saveFolder, folderName: newProfileConfig.name });
+    const msg = await window.electronAPI.deleteFolder([saveFolder.value, newProfileConfig.dirName]);
+
+    changeSnackTextThenShow(msg);
+
+    if (msg !== '目录删除成功') return;
   }
   confirmDialog.value = false;
   router.replace({ name: 'home' });

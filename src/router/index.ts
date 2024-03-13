@@ -19,11 +19,6 @@ const router = createRouter({
       component: () => import('../views/SaveProfileDetail.vue'),
     },
     {
-      name: 'fileTest',
-      path: '/fileTest',
-      component: () => import('../views/FileTest.vue'),
-    },
-    {
       name: 'settings',
       path: '/settings',
       component: () => import('../views/Settings.vue'),

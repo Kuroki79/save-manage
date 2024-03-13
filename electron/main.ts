@@ -1,17 +1,17 @@
 import {
   createFolder,
-  renameFile,
+  renameFileAndFolder,
   getDirList,
   copyFile,
   copyFolder,
   deleteFolder,
   deleteFolderFile
-} from "./fileTools";
+} from './fileTools';
 import path from 'path';
 
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   const win = new BrowserWindow({
     title: 'Main window',
     frame: false,
@@ -19,8 +19,8 @@ app.whenReady().then(async () => {
     minWidth: 1024,
     minHeight: 768,
     webPreferences: {
-      contextIsolation: false,
-      nodeIntegration: true,
+      contextIsolation: true,
+      // nodeIntegration: true,
       webSecurity: false,
       preload: path.join(__dirname, 'preload.js')
     }
@@ -41,15 +41,15 @@ app.whenReady().then(async () => {
 
   win.on('maximize', () => {
     // console.log('maximize');
-    win.webContents.send("onMaximize");
+    win.webContents.send('window:change', true);
   });
 
   win.on('unmaximize', () => {
     // console.log('unmaximize');
-    win.webContents.send("onUnmaximize");
+    win.webContents.send('window:change', false);
   });
 
-  ipcMain.on('window-action', (e, arg) => {
+  ipcMain.on('window:action', (e, arg) => {
     switch (arg) {
       case 'min':
         win.minimize();
@@ -67,92 +67,96 @@ app.whenReady().then(async () => {
         break;
     }
   });
-  
-  ipcMain.on('create-folder', (e, arg) => {
+
+  ipcMain.handle('exploreAction:createFolder', (e, arg) => {
     try {
       createFolder(path.join(arg.basePath, arg.folderName));
+      return '文件夹创建成功';
     } catch (e) {
-      console.log(e);
+      // console.log(e);
+      return e;
     }
   });
-  
-  ipcMain.on('rename-file', (e, arg) => {
-    renameFile(arg.oldName, path.join(arg.basePath, arg.newName));
+
+  ipcMain.handle('exploreAction:rename', (e, arg) => {
+    try {
+      renameFileAndFolder(
+        path.join(arg.basePath, arg.oldName),
+        path.join(arg.basePath, arg.newName)
+      );
+
+      return '重命名成功';
+    } catch (e) {
+      return e;
+    }
   });
-  
-  ipcMain.on('chose-directory-dialog', (e, arg) => {
-    dialog.showOpenDialog({
-      properties: [arg.prop],
+
+  ipcMain.handle('dialog:selectFolder', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
       title: '请选择默认目录',
       buttonLabel: '选择'
-    }).then(result => {
-      console.log(result);
-      if (result.canceled) return;
-      e.sender.send(arg.action, result.filePaths);
     });
+
+    console.log(filePaths);
+
+    if (!canceled) {
+      return filePaths[0];
+    }
   });
-  
-  ipcMain.on('get-dir-list', (e, arg) => {
-    e.sender.send('getDirList', getDirList(arg));
+
+  ipcMain.handle('get-dir-list', (e, arg) => {
+    try {
+      return getDirList(arg);
+    } catch (e) {
+      return e;
+    }
   });
-  
-  ipcMain.on('create-backup', (e, arg) => {
-    const newBackupFolderPath = path.join(arg.basePath, arg.folderName, arg.createTime);
-    // console.log(newBackupFolderPath);
+
+  ipcMain.handle('backup:create', (e, arg) => {
+    const newBackupFolderPath = path.join(arg.basePath, arg.targetFolderName, arg.createTime);
     try {
       createFolder(newBackupFolderPath);
-      copyFolder(arg.source, newBackupFolderPath);
-      win.webContents.send("file-operation", '创建备份成功');
+      copyFolder(arg.sourcePath, newBackupFolderPath);
+      return '创建备份成功';
     } catch (e) {
-      console.log(e);
-    }
-  });
-  
-  ipcMain.on('restore-backup', (e, arg) => {
-    const sourcePath = path.join(arg.basePath, arg.folderName, arg.createTime);
-    // const newBackupFolderPath = path.join(arg.basePath, arg.folderName, '第二次');
-    // console.log(newBackupFolderPath);
-    try {
-      copyFolder(sourcePath, arg.destination);
-      win.webContents.send("file-operation", '还原备份成功');
-    } catch (e) {
-      console.log(e);
+      return e;
     }
   });
 
-  ipcMain.on('delete-backup', (e, arg) => {
-    try {
-      deleteFolder(path.join(arg.basePath, arg.folderName, arg.createTime));
-      win.webContents.send("file-operation", '删除备份成功');
-    } catch (e) {
-      console.log(e);
-    }
-  });
-
-  ipcMain.on('delete-profile', (e, arg) => {
-    try {
-      deleteFolder(path.join(arg.basePath, arg.folderName));
-      // win.webContents.send("file-operation", '删除本地文件成功');
-    } catch (e) {
-      console.log(e);
-    }
-  });
-
-  ipcMain.on('clean-folder-then-restore', (e, arg) => {
+  ipcMain.handle('backup:restore', (e, arg) => {
     const sourcePath = path.join(arg.basePath, arg.folderName, arg.createTime);
     try {
-      deleteFolderFile(arg.destination);
+      if (arg.isOnlyOverwrite) {
+        deleteFolderFile(arg.destination);
+      }
       copyFolder(sourcePath, arg.destination);
-      win.webContents.send("file-operation", '还原备份成功');
+      return '还原备份成功';
     } catch (e) {
-      console.log(e);
+      return e;
     }
   });
-  
-  ipcMain.on('copy-file', (e, arg) => {
-    copyFile(arg.source, arg.destination);
+
+  ipcMain.handle('exploreAction:deleteFolder', (e, arg) => {
+    try {
+      // console.log(arg);
+      // console.log(path.join(...arg));
+      deleteFolder(path.join(...arg));
+      return '目录删除成功';
+    } catch (e) {
+      return e;
+    }
   });
-  
+
+  ipcMain.handle('copy-file', (e, arg) => {
+    try {
+      copyFile(arg.source, arg.destination);
+      return '拷贝文件成功';
+    } catch (e) {
+      return e;
+    }
+  });
+
   ipcMain.on('copy-folder', (e, arg) => {
     copyFolder(arg.source, arg.destination);
   });

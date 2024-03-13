@@ -2,7 +2,7 @@
   <div :class="{ 'max-window': isMaximized, 'win': !isMaximized }">
     <v-app id="inspire">
       <!-- 设置 z-index 尽可能的大，以防止 overlay 覆盖了系统栏 -->
-      <v-system-bar style="z-index: 9999;" :color="primaryConfigStore.themeColor" window rounded>
+      <v-system-bar style="z-index: 9999;" :color="themeColor" window rounded>
         <v-spacer class="fill-height drag-area"></v-spacer>
 
         <v-btn @click="minWindow" icon="mdi-minus" variant="text"></v-btn>
@@ -13,14 +13,14 @@
         <!-- <v-btn icon="mdi-close-thick" variant="text"></v-btn> -->
       </v-system-bar>
 
-      <v-app-bar :color="primaryConfigStore.themeColor">
+      <v-app-bar :color="themeColor">
         <v-app-bar-nav-icon :icon="navIcon" @click="navIconAction"></v-app-bar-nav-icon>
 
         <v-app-bar-title>{{ currentPageTitle }}</v-app-bar-title>
       </v-app-bar>
 
       <v-navigation-drawer v-model="drawer">
-        <v-list :color="primaryConfigStore.themeColor">
+        <v-list :color="themeColor">
           <v-list-item prepend-icon="mdi-home" to="/home" title="主页"></v-list-item>
           <v-list-item prepend-icon="mdi-cog" to="/settings" title="设置"></v-list-item>
         </v-list>
@@ -30,6 +30,9 @@
         <v-container class="custom-container">
           <div class="container-wrapper">
             <RouterView />
+            <v-snackbar :timeout="3000" v-model="globalSnackBar">
+              {{ globalSnackBarText }}
+            </v-snackbar>
           </div>
         </v-container>
       </v-main>
@@ -39,8 +42,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
-import { useIpcRenderer } from '@vueuse/electron';
 import { usePrimaryConfigStore } from './stores/primaryConfig';
 import myRouter from '@/router';
 
@@ -55,24 +58,20 @@ const mainPageRoute: string[] = ['home', 'settings'];
 const route = useRoute();
 const router = useRouter();
 
-const primaryConfigStore = usePrimaryConfigStore();
-const ipcRenderer = useIpcRenderer();
+const { themeColor, globalSnackBar, globalSnackBarText } = storeToRefs(usePrimaryConfigStore());
 const drawer = ref<boolean>(false);
 
 const isMaximized = ref<boolean>(false);
 const currentPageTitle = ref<string>('主页');
 const navIcon = ref<string>('mdi-menu');
 
-ipcRenderer.on('onMaximize', () => {
-  isMaximized.value = true;
-});
-
-ipcRenderer.on('onUnmaximize', () => {
-  isMaximized.value = false;
+window.electronAPI.onWindowChange((isMax: boolean) => {
+  // console.log(isMax);
+  isMaximized.value = isMax;
 });
 
 myRouter.afterEach((to) => {
-  // console.log(to);
+  console.log(to);
   if (to.name) {
     navIcon.value = mainPageRoute.includes(to.name as string) ? 'mdi-menu' : 'mdi-arrow-left';
     currentPageTitle.value = routerTitleConfig[to.name as string];
@@ -89,20 +88,20 @@ function navIconAction() {
 
 function maxWindow() {
   if (isMaximized.value) {
-    ipcRenderer.send('window-action', 'restore');
+    window.electronAPI.windowAction('restore');
     isMaximized.value = false;
   } else {
-    ipcRenderer.send('window-action', 'max');
+    window.electronAPI.windowAction('max');
     isMaximized.value = true;
   }
 }
 
 function minWindow() {
-  ipcRenderer.send('window-action', 'min');
+  window.electronAPI.windowAction('min');
 }
 
 function closeWindow() {
-  ipcRenderer.send('window-action', 'close');
+  window.electronAPI.windowAction('close');
 }
 </script>
 

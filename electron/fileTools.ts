@@ -1,15 +1,17 @@
-import path from "path";
+import path from 'path';
 
-const fs = require("fs");
+const fs = require('fs');
 // const path = require("path");
 
 function createFolder(folderName: string) {
   if (!fs.existsSync(folderName)) {
     fs.mkdirSync(folderName);
+  } else {
+    throw Error('文件夹已存在');
   }
 }
 
-function renameFile(oldName: string, newName: string) {
+function renameFileAndFolder(oldName: string, newName: string) {
   fs.renameSync(oldName, newName);
 }
 
@@ -20,6 +22,8 @@ function deleteFile(fileName: string) {
 function deleteFolder(folderName: string) {
   if (fs.existsSync(folderName)) {
     fs.rmSync(folderName, { recursive: true });
+  } else {
+    throw Error('文件夹不存在');
   }
 }
 
@@ -27,7 +31,7 @@ function deleteFolderFile(folderName: string) {
   if (fs.existsSync(folderName)) {
     getDirList(folderName).forEach((file: string) => {
       const curPath = path.join(folderName, file);
-      
+
       if (fs.lstatSync(curPath).isDirectory()) {
         deleteFolder(curPath);
       } else {
@@ -35,6 +39,8 @@ function deleteFolderFile(folderName: string) {
         deleteFile(curPath);
       }
     });
+  } else {
+    throw Error('文件或文件夹不存在');
   }
 }
 
@@ -51,7 +57,7 @@ function writeFile(fileName: string, content: string) {
 }
 
 function readFile(fileName: string) {
-  return fs.readFileSync(fileName, "utf-8");
+  return fs.readFileSync(fileName, 'utf-8');
 }
 
 function getDirList(folderName: string) {
@@ -60,7 +66,7 @@ function getDirList(folderName: string) {
 
 export {
   createFolder,
-  renameFile,
+  renameFileAndFolder,
   deleteFile,
   deleteFolder,
   deleteFolderFile,

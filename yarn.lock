@@ -740,21 +740,6 @@
   resolved "https://registry.npmmirror.com/@vue/tsconfig/-/tsconfig-0.5.1.tgz#3124ec16cc0c7e04165b88dc091e6b97782fffa9"
   integrity sha512-VcZK7MvpjuTPx2w6blwnwZAu5/LgBUtejFOi3pPGQFXQN5Ela03FUtd2Qtg4yWGGissVL0dr6Ro1LfOFh+PCuQ==
 
-"@vueuse/electron@^10.8.0":
-  version "10.8.0"
-  resolved "https://registry.npmmirror.com/@vueuse/electron/-/electron-10.8.0.tgz#5fa9cc5c2fbdce36de32cacb5da6c772d6f0759b"
-  integrity sha512-mzg0ic7eysrOH9VxgCrndejNoCZUalFlvHOP60TdLVVfcMkia2RitXfATqI3XkfGOqdGkS+Am//Ey0ISLarziA==
-  dependencies:
-    "@vueuse/shared" "10.8.0"
-    vue-demi ">=0.14.7"
-
-"@vueuse/shared@10.8.0":
-  version "10.8.0"
-  resolved "https://registry.npmmirror.com/@vueuse/shared/-/shared-10.8.0.tgz#56e778919a3de9f2552bcbf3c09163e6d1035f1a"
-  integrity sha512-dUdy6zwHhULGxmr9YUg8e+EnB39gcM4Fe2oKBSrh3cOsV30JcMPtsyuspgFCUo5xxFNaeMf/W2yyKfST7Bg8oQ==
-  dependencies:
-    vue-demi ">=0.14.7"
-
 "@xmldom/xmldom@^0.8.8":
   version "0.8.10"
   resolved "https://registry.npmmirror.com/@xmldom/xmldom/-/xmldom-0.8.10.tgz#a1337ca426aa61cef9fe15b5b28e340a72f6fa99"
@@ -2927,7 +2912,7 @@ vite@^5.1.4:
   optionalDependencies:
     fsevents "~2.3.3"
 
-vue-demi@>=0.14.5, vue-demi@>=0.14.7:
+vue-demi@>=0.14.5:
   version "0.14.7"
   resolved "https://registry.npmmirror.com/vue-demi/-/vue-demi-0.14.7.tgz#8317536b3ef74c5b09f268f7782e70194567d8f2"
   integrity sha512-EOG8KXDQNwkJILkx/gPcoL/7vH+hORoBaKgGe+6W7VFMvCYJfmF2dGbvgDroVnI8LU7/kTu8mbjRZGBU1z9NTA==
