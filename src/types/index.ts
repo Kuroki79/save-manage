@@ -4,7 +4,6 @@ export interface SaveItemInter {
   dirName: string,
   location: string,
   createTime: string,
-  autoBackupTime: number,
   historyBackupList: HistoryBackupListInter,
   isOnlyOverwrite: boolean
 }

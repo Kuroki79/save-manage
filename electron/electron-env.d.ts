@@ -26,6 +26,9 @@ export interface IElectronAPI {
     isOnlyOverwrite: boolean 
   }) => Promise<string>;
   deleteFolder: (arg: string[]) => Promise<string>,
+  readFile: () => Promise<string>,
+  readFolder: () => Promise<string>,
+  writeFile: (arg: string) => Promise<string>,
   
   onWindowChange: (callback: Function) => void
 }
@@ -33,6 +36,5 @@ export interface IElectronAPI {
 declare global {
   interface Window {
     electronAPI: IElectronAPI;
-    // electronAPI: any;
   }
 }

@@ -28,6 +28,9 @@ const exposeActions: IElectronAPI = {
     isOnlyOverwrite: boolean 
   }) => ipcRenderer.invoke('backup:restore', arg),
   deleteFolder: (arg: string[]) => ipcRenderer.invoke('exploreAction:deleteFolder', arg),
+  readFile: () => ipcRenderer.invoke('exploreAction:readFile'),
+  readFolder: () => ipcRenderer.invoke('exploreAction:readFolder'),
+  writeFile: (arg: string) => ipcRenderer.invoke('exploreAction:writeFile', arg),
 
   onWindowChange: (callback: Function) => ipcRenderer.on('window:change', (_event, value) => callback(value)),
 };

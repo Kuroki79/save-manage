@@ -1,36 +1,35 @@
 <template>
-  <v-card>
-    <v-card-title>
-      <span class="text-h5">存档配置</span>
-    </v-card-title>
+  <v-card title="存档配置">
+    <template v-slot:prepend>
+      <v-icon :color="mainConfig.themeColor" icon="mdi-content-save-edit"></v-icon>
+    </template>
     <v-card-text>
       <v-container>
         <v-row>
           <v-col cols="12">
-            <v-text-field v-model="newProfileConfig.name" label="配置名称" required></v-text-field>
+            <v-text-field v-model="newProfileConfig.name" label="配置名称"></v-text-field>
           </v-col>
           <v-col cols="12">
             <v-text-field v-model="newProfileConfig.dirName" hint="修改该值后保存会影响到目录名称" persistent-hint
               label="备份文件夹名称"></v-text-field>
           </v-col>
           <v-col cols="12">
-            <v-text-field v-model="newProfileConfig.location" label="存档路径" @click:control="selectBackupFolder" readonly
-              required></v-text-field>
-          </v-col>
-          <v-col cols="12" sm="4" md="2">
-            <v-text-field type="number" v-model="newProfileConfig.autoBackupTime" label="自动备份时间间隔" hint="单位为小时"
-              persistent-hint required disabled></v-text-field>
+            <v-text-field v-model="newProfileConfig.location" label="存档路径" @click:control="selectBackupFolder"
+              readonly></v-text-field>
           </v-col>
           <v-col cols="12" sm="8" md="6">
-            <v-switch :color="themeColor" v-model="newProfileConfig.isOnlyOverwrite"
+            <v-switch :color="mainConfig.themeColor" v-model="newProfileConfig.isOnlyOverwrite"
               :label="`存档还原方式：${newProfileConfig.isOnlyOverwrite ? '仅覆盖' : '清空目录后覆盖'}`"></v-switch>
           </v-col>
         </v-row>
       </v-container>
     </v-card-text>
+
+    <v-divider></v-divider>
+
     <v-card-actions>
       <v-spacer></v-spacer>
-      <v-btn color="blue-darken-1" variant="text" @click="saveProfile">
+      <v-btn :color="mainConfig.themeColor" variant="tonal" @click="saveProfile">
         保存
       </v-btn>
     </v-card-actions>
@@ -43,7 +42,7 @@
       <v-list-item v-for="item in saveList[targetProfileIndex].historyBackupList" :key="item.createTime"
         :title="item.createTime" :subtitle="item.note">
         <template v-slot:prepend>
-          <v-avatar :color="themeColor">
+          <v-avatar :color="mainConfig.themeColor">
             <v-icon color="white">mdi-history</v-icon>
           </v-avatar>
         </template>
@@ -88,7 +87,7 @@
                 <v-btn variant="text" @click="noteEditMenu = false">
                   取消
                 </v-btn>
-                <v-btn color="primary" variant="text" @click="() => editBackupNote(item.createTime)">
+                <v-btn :color="mainConfig.themeColor" variant="tonal" @click="() => editBackupNote(item.createTime)">
                   保存
                 </v-btn>
               </v-card-actions>
@@ -114,7 +113,7 @@
     </v-tooltip>
     <v-tooltip text="新建历史备份">
       <template v-slot:activator="{ props }">
-        <v-btn v-bind="props" @click="createBackupDialog = true" :color="themeColor"
+        <v-btn v-bind="props" @click="createBackupDialog = true" :color="mainConfig.themeColor"
           icon="mdi-content-save-plus"></v-btn>
       </template>
     </v-tooltip>
@@ -130,7 +129,7 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn :color="themeColor" variant="text" @click="confirmDialog = false">
+        <v-btn :color="mainConfig.themeColor" variant="text" @click="confirmDialog = false">
           否
         </v-btn>
         <v-btn color="red-darken-2" variant="text" @click="deleteProfile">
@@ -142,21 +141,21 @@
 
   <v-dialog v-model="createBackupDialog" persistent width="512">
     <v-card>
-      <v-card-title class="text-h5">
+      <v-card-title class="text-h6">
         历史备份配置
       </v-card-title>
       <v-card-text>
         <v-container>
           <v-row>
             <v-col cols="12">
-              <v-text-field v-model="backupNote" label="备注"></v-text-field>
+              <v-text-field v-model="backupNote" label="备注" reqiuired></v-text-field>
             </v-col>
           </v-row>
         </v-container>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn :color="themeColor" variant="text" @click="createBackupDialog = false">
+        <v-btn :color="mainConfig.themeColor" variant="text" @click="createBackupDialog = false">
           否
         </v-btn>
         <v-btn color="red-darken-2" variant="text" @click="createNewBackup">
@@ -179,7 +178,7 @@ import PlaceholdingMessage from '@/components/placeholdingMessage.vue';
 const route = useRoute();
 const router = useRouter();
 
-const { saveList, saveFolder, themeColor } = storeToRefs(usePrimaryConfigStore());
+const { saveList, mainConfig } = storeToRefs(usePrimaryConfigStore());
 const {
   changeBackupNote,
   changeSnackTextThenShow,
@@ -218,12 +217,11 @@ async function saveProfile() {
   saveList.value[targetProfileIndex].location = newProfileConfig.location;
 
   if (saveList.value[targetProfileIndex].dirName !== newProfileConfig.dirName) {
-    const result = await window.electronAPI.renameAction({ basePath: saveFolder.value, oldName: saveList.value[targetProfileIndex].dirName, newName: newProfileConfig.dirName });
+    const result = await window.electronAPI.renameAction({ basePath: mainConfig.value.saveFolder, oldName: saveList.value[targetProfileIndex].dirName, newName: newProfileConfig.dirName });
     console.log(result);
     saveList.value[targetProfileIndex].dirName = newProfileConfig.dirName;
   }
-
-  saveList.value[targetProfileIndex].autoBackupTime = newProfileConfig.autoBackupTime;
+  
   saveList.value[targetProfileIndex].isOnlyOverwrite = newProfileConfig.isOnlyOverwrite;
 
   changeSnackTextThenShow('配置已保存');
@@ -234,7 +232,7 @@ async function createNewBackup() {
 
   const result = await window.electronAPI.createBackup({
     createTime,
-    basePath: saveFolder.value,
+    basePath: mainConfig.value.saveFolder,
     targetFolderName: newProfileConfig.dirName,
     sourcePath: newProfileConfig.location
   });
@@ -252,7 +250,7 @@ async function createNewBackup() {
 async function restoreBackup(createTime: string) {
   let msg = await window.electronAPI.restoreBackup({
     createTime,
-    basePath: saveFolder.value,
+    basePath: mainConfig.value.saveFolder,
     folderName: newProfileConfig.dirName,
     destination: newProfileConfig.location,
     isOnlyOverwrite: newProfileConfig.isOnlyOverwrite
@@ -268,7 +266,7 @@ function editBackupNote(createTime: string) {
 }
 
 async function deleteBackup(createTime: string) {
-  const msg = await window.electronAPI.deleteFolder([saveFolder.value, newProfileConfig.dirName, createTime]);
+  const msg = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, newProfileConfig.dirName, createTime]);
   changeSnackTextThenShow(msg);
   if (msg === '目录删除成功') {
     deleteHistoryBackup(newProfileConfig.id, createTime);
@@ -278,7 +276,7 @@ async function deleteBackup(createTime: string) {
 async function deleteProfile() {
   deleteSaveProfile(newProfileConfig.id);
   if (isDeleteFile.value) {
-    const msg = await window.electronAPI.deleteFolder([saveFolder.value, newProfileConfig.dirName]);
+    const msg = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, newProfileConfig.dirName]);
 
     changeSnackTextThenShow(msg);
 

@@ -5,8 +5,12 @@ import { type SaveListInter, type SaveItemInter, type HistoryBackupInter } from 
 
 export const usePrimaryConfigStore = defineStore('primaryConfig', {
   state: () => ({
-    themeColor: 'primary',
-    saveFolder: '',
+    mainConfig: {
+      themeColor: 'primary',
+      saveFolder: '',
+      autoBackupTime: 0
+    },
+    dateTimeFlag: null as Date | null,
     saveList: [] as SaveListInter,
     globalSnackBarText: '' as string,
     globalSnackBar: false as boolean
@@ -43,6 +47,6 @@ export const usePrimaryConfigStore = defineStore('primaryConfig', {
     }
   },
   persist: {
-    paths: ['themeColor', 'saveFolder', 'saveList']
+    paths: ['mainConfig', 'saveList']
   }
 });

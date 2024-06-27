@@ -5,7 +5,9 @@ import {
   copyFile,
   copyFolder,
   deleteFolder,
-  deleteFolderFile
+  deleteFolderFile,
+  readFile,
+  writeFile
 } from './fileTools';
 import path from 'path';
 
@@ -13,7 +15,7 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 
 app.whenReady().then(() => {
   const win = new BrowserWindow({
-    title: 'Main window',
+    title: '存档管理',
     frame: false,
     show: false,
     minWidth: 1024,
@@ -71,7 +73,7 @@ app.whenReady().then(() => {
   ipcMain.handle('exploreAction:createFolder', (e, arg) => {
     try {
       createFolder(path.join(arg.basePath, arg.folderName));
-      return '文件夹创建成功';
+      return '目录创建成功';
     } catch (e) {
       // console.log(e);
       return e;
@@ -94,7 +96,7 @@ app.whenReady().then(() => {
   ipcMain.handle('dialog:selectFolder', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
       properties: ['openDirectory'],
-      title: '请选择默认目录',
+      title: '选择目录',
       buttonLabel: '选择'
     });
 
@@ -139,12 +141,73 @@ app.whenReady().then(() => {
 
   ipcMain.handle('exploreAction:deleteFolder', (e, arg) => {
     try {
-      // console.log(arg);
-      // console.log(path.join(...arg));
       deleteFolder(path.join(...arg));
       return '目录删除成功';
     } catch (e) {
       return e;
+    }
+  });
+
+  ipcMain.handle('exploreAction:readFile', async () => {
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        title: '选择文件',
+        buttonLabel: '选择',
+        filters: [
+          { name: 'JSON文件', extensions: ['json'] },
+        ]
+      });
+  
+      console.log(filePaths);
+
+      if (canceled) return '操作已取消';
+
+      return readFile(filePaths[0]);
+
+    } catch (e) {
+      return e;
+    }
+  });
+
+  ipcMain.handle('exploreAction:readFolder', async () => {
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: '选择目录',
+        buttonLabel: '选择',
+      });
+  
+      console.log(filePaths);
+
+      if (canceled) return '操作已取消';
+
+      return getDirList(filePaths[0]);
+
+    } catch (e) {
+      return e;
+    }
+  });
+
+  ipcMain.handle('exploreAction:writeFile', async (e, arg) => {
+    try {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: '保存为',
+        buttonLabel: '保存',
+        filters: [
+          { name: 'JSON文件', extensions: ['json'] },
+        ]
+      });
+  
+      console.log(filePath);
+
+      if (canceled) return '操作已取消';
+
+      writeFile(filePath as string, arg);
+
+      return '导出成功';
+    } catch (e) {
+      console.log(e);
     }
   });
 
