@@ -40,7 +40,7 @@
     </v-card-title>
     <v-list v-if="saveList[targetProfileIndex].historyBackupList.length !== 0" lines="two">
       <v-list-item v-for="item in saveList[targetProfileIndex].historyBackupList" :key="item.createTime"
-        :title="item.createTime" :subtitle="item.note">
+        :title="returnFormatDate(item.createTime)" :subtitle="item.note">
         <template v-slot:prepend>
           <v-avatar :color="mainConfig.themeColor">
             <v-icon color="white">mdi-history</v-icon>
@@ -106,11 +106,11 @@
     <placeholding-message message="暂无历史备份" icon-size="48" font-size="20px" v-else />
   </v-card>
   <div class="control-area">
-    <v-tooltip text="删除存档配置">
+    <!-- <v-tooltip text="删除存档配置">
       <template v-slot:activator="{ props }">
         <v-btn v-bind="props" @click="confirmDialog = true" color="red-darken-2" icon="mdi-delete"></v-btn>
       </template>
-    </v-tooltip>
+    </v-tooltip> -->
     <v-tooltip text="新建历史备份">
       <template v-slot:activator="{ props }">
         <v-btn v-bind="props" @click="createBackupDialog = true" :color="mainConfig.themeColor"
@@ -171,9 +171,11 @@ import { ref, reactive, mergeProps } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import { storeToRefs } from 'pinia';
+import cloneDeep from 'lodash/cloneDeep';
 import { type SaveItemInter } from '../types/index';
 import { usePrimaryConfigStore } from '../stores/primaryConfig';
 import PlaceholdingMessage from '@/components/placeholdingMessage.vue';
+import { parseCustomDate } from '@/utils/tools';
 
 const route = useRoute();
 const router = useRouter();
@@ -201,27 +203,35 @@ const noteEditText = ref<string>('');
 
 const targetProfileIndex: number = saveList.value.findIndex(item => item.id === route.params.id);
 
-const initialProfile = (): SaveItemInter => (saveList.value[targetProfileIndex]);
+const initialProfile = (): SaveItemInter => (cloneDeep(saveList.value[targetProfileIndex]));
 
 let newProfileConfig = reactive<SaveItemInter>(initialProfile());
 
 async function selectBackupFolder() {
-  const filePath = await window.electronAPI.selectFolder();
-  if (filePath) {
-    newProfileConfig.location = filePath;
+  const res = await window.electronAPI.selectFolder();
+
+  if (res.success) {
+    newProfileConfig.location = res.data as string;
   }
+
+  changeSnackTextThenShow(res.message);
 }
 
 async function saveProfile() {
   saveList.value[targetProfileIndex].name = newProfileConfig.name;
   saveList.value[targetProfileIndex].location = newProfileConfig.location;
 
+  console.log(saveList.value[targetProfileIndex].dirName, newProfileConfig.dirName);
   if (saveList.value[targetProfileIndex].dirName !== newProfileConfig.dirName) {
-    const result = await window.electronAPI.renameAction({ basePath: mainConfig.value.saveFolder, oldName: saveList.value[targetProfileIndex].dirName, newName: newProfileConfig.dirName });
-    console.log(result);
-    saveList.value[targetProfileIndex].dirName = newProfileConfig.dirName;
+    const res = await window.electronAPI.renameAction({ basePath: mainConfig.value.saveFolder, oldName: saveList.value[targetProfileIndex].dirName, newName: newProfileConfig.dirName });
+
+    if (res.success) {
+      saveList.value[targetProfileIndex].dirName = newProfileConfig.dirName;
+    }
+
+    changeSnackTextThenShow(res.message);
   }
-  
+
   saveList.value[targetProfileIndex].isOnlyOverwrite = newProfileConfig.isOnlyOverwrite;
 
   changeSnackTextThenShow('配置已保存');
@@ -230,25 +240,26 @@ async function saveProfile() {
 async function createNewBackup() {
   const createTime = dayjs().format('YYYYMMDD HHmmss');
 
-  const result = await window.electronAPI.createBackup({
+  const res = await window.electronAPI.createBackup({
     createTime,
     basePath: mainConfig.value.saveFolder,
     targetFolderName: newProfileConfig.dirName,
     sourcePath: newProfileConfig.location
   });
 
-  changeSnackTextThenShow(result);
+  if (res.success) {
+    addHistoryBackup(newProfileConfig.id, { createTime, note: backupNote.value });
 
-  if (result !== '创建备份成功') return;
+    backupNote.value = '';
+    createBackupDialog.value = false;
+  }
 
-  addHistoryBackup(newProfileConfig.id, { createTime, note: backupNote.value });
+  changeSnackTextThenShow(res.message);
 
-  backupNote.value = '';
-  createBackupDialog.value = false;
 }
 
 async function restoreBackup(createTime: string) {
-  let msg = await window.electronAPI.restoreBackup({
+  let res = await window.electronAPI.restoreBackup({
     createTime,
     basePath: mainConfig.value.saveFolder,
     folderName: newProfileConfig.dirName,
@@ -256,7 +267,7 @@ async function restoreBackup(createTime: string) {
     isOnlyOverwrite: newProfileConfig.isOnlyOverwrite
   });
 
-  changeSnackTextThenShow(msg);
+  changeSnackTextThenShow(res.message);
 }
 
 function editBackupNote(createTime: string) {
@@ -265,23 +276,30 @@ function editBackupNote(createTime: string) {
   noteEditText.value = '';
 }
 
+function returnFormatDate (dateStr: string) {
+  return dayjs(parseCustomDate(dateStr)).format('YYYY年MM月DD日 HH:mm:ss');
+}
+
 async function deleteBackup(createTime: string) {
-  const msg = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, newProfileConfig.dirName, createTime]);
-  changeSnackTextThenShow(msg);
-  if (msg === '目录删除成功') {
+  const res = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, newProfileConfig.dirName, createTime]);
+  if (res.success) {
     deleteHistoryBackup(newProfileConfig.id, createTime);
   }
+
+  changeSnackTextThenShow(res.message);
 }
 
 async function deleteProfile() {
-  deleteSaveProfile(newProfileConfig.id);
   if (isDeleteFile.value) {
-    const msg = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, newProfileConfig.dirName]);
+    const res = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, newProfileConfig.dirName]);
 
-    changeSnackTextThenShow(msg);
+    changeSnackTextThenShow(res.message);
 
-    if (msg !== '目录删除成功') return;
+    if (!res.success) return;
   }
+
+  deleteSaveProfile(newProfileConfig.id);
+
   confirmDialog.value = false;
   router.replace({ name: 'home' });
 }

@@ -7,7 +7,7 @@ function createFolder(folderName: string) {
   if (!fs.existsSync(folderName)) {
     fs.mkdirSync(folderName);
   } else {
-    throw Error('文件夹已存在');
+    throw Error('目录已存在');
   }
 }
 
@@ -23,7 +23,7 @@ function deleteFolder(folderName: string) {
   if (fs.existsSync(folderName)) {
     fs.rmSync(folderName, { recursive: true });
   } else {
-    throw Error('文件夹不存在');
+    throw Error('目录不存在');
   }
 }
 
@@ -40,7 +40,7 @@ function deleteFolderFile(folderName: string) {
       }
     });
   } else {
-    throw Error('文件或文件夹不存在');
+    throw Error('文件或目录不存在');
   }
 }
 

@@ -17,34 +17,43 @@
 
         <v-spacer></v-spacer>
 
-        <v-menu>
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props">
-              <v-icon>mdi-dots-vertical</v-icon>
-            </v-btn>
-          </template>
+        <template v-slot:append>
+          <!-- <v-btn v-if="currentRouterName === 'home'" icon="mdi-magnify"></v-btn> -->
+          <v-tooltip text="多选">
+            <template v-slot:activator="{ props }">
+              <v-btn v-if="currentRouterName === 'home'" v-bind="props" icon="mdi-checkbox-multiple-outline"
+            @click="multiCheckMode = !multiCheckMode"></v-btn>
+            </template>
+          </v-tooltip>
 
-          <v-list density="compact">
-            <v-list-subheader>配置</v-list-subheader>
+          <v-menu>
+            <template v-slot:activator="{ props }">
+              <v-btn icon v-bind="props">
+                <v-icon>mdi-dots-vertical</v-icon>
+              </v-btn>
+            </template>
 
-            <v-list-item @click="dialog = true">
-              <template v-slot:prepend>
-                <v-icon :color="mainConfig.themeColor" icon="mdi-swap-horizontal"></v-icon>
-              </template>
+            <v-list density="compact">
+              <v-list-subheader>配置</v-list-subheader>
 
-              <v-list-item-title>导入/导出</v-list-item-title>
-            </v-list-item>
+              <v-list-item @click="importExportDialog = true">
+                <template v-slot:prepend>
+                  <v-icon :color="mainConfig.themeColor" icon="mdi-swap-horizontal"></v-icon>
+                </template>
 
-            <!--<v-list-subheader>功能</v-list-subheader>
-            <v-list-item @click="dialog = true">
-              <template v-slot:prepend>
-                <v-icon :color="mainConfig.themeColor" icon="mdi-swap-horizontal"></v-icon>
-              </template>
+                <v-list-item-title>导入/导出</v-list-item-title>
+              </v-list-item>
 
-              <v-list-item-title>扫描用户目录</v-list-item-title>
-            </v-list-item> -->
+              <v-list-subheader>功能</v-list-subheader>
+              <v-list-item @click="scanUserFolder">
+                <template v-slot:prepend>
+                  <v-icon :color="mainConfig.themeColor" icon="mdi-magnify-scan"></v-icon>
+                </template>
 
-            <!-- <v-list-item v-for="(item, i) in appBarMenuItems" :key="i" :value="item"
+                <v-list-item-title>扫描游戏目录</v-list-item-title>
+              </v-list-item>
+
+              <!-- <v-list-item v-for="(item, i) in appBarMenuItems" :key="i" :value="item"
               @click="() => appBarMenuAction(item.action)">
               <template v-slot:prepend>
                 <v-icon :color="mainConfig.themeColor" :icon="item.icon"></v-icon>
@@ -52,10 +61,10 @@
 
               <v-list-item-title>{{ item.text }}</v-list-item-title>
             </v-list-item> -->
-          </v-list>
-        </v-menu>
+            </v-list>
+          </v-menu>
+        </template>
       </v-app-bar>
-
       <v-navigation-drawer v-model="drawer">
         <v-list :color="mainConfig.themeColor">
           <v-list-item prepend-icon="mdi-home" to="/home" title="主页"></v-list-item>
@@ -70,7 +79,7 @@
             <v-snackbar :timeout="3000" v-model="globalSnackBar">
               {{ globalSnackBarText }}
             </v-snackbar>
-            <v-dialog v-model="dialog" width="auto">
+            <v-dialog v-model="importExportDialog" width="auto">
               <v-card title="导入/导出">
                 <template v-slot:prepend>
                   <v-icon :color="mainConfig.themeColor" icon="mdi-content-save-plus"></v-icon>
@@ -106,6 +115,47 @@
                 </v-form>
               </v-card>
             </v-dialog>
+            <v-dialog v-model="scanDialog" min-width="600px" width="auto" scrollable>
+              <template v-slot:default>
+                <v-card :loading="scanCardLoading" prepend-icon="mdi-application-import" title="导入Steam游戏">
+                  <template v-slot:loader="{ isActive }">
+                    <v-progress-linear :active="isActive" color="deep-purple" height="4"
+                      indeterminate></v-progress-linear>
+                  </template>
+                  <v-card-text class="px-4" :style="{ height: windowHeight - 200 + 'px' }">
+                    <v-list lines="two" density="compact">
+                      <v-list-subheader inset>绿色：已录入存档路径；黄色：未录入存档路径。</v-list-subheader>
+                      <v-list-item v-for="gameObj in importGameList" :key="gameObj.id"
+                        @click="gameObj.checked = !gameObj.checked">
+                        <template v-slot:prepend>
+                          <v-list-item-action start>
+                            <v-checkbox-btn :color="gameObj.savePath.length !== 0 ? 'success' : 'warning'"
+                              :model-value="gameObj.checked"
+                              @update:model-value="gameObj.checked = $event"></v-checkbox-btn>
+                          </v-list-item-action>
+                        </template>
+
+                        <v-list-item-title>{{ gameObj.name }}</v-list-item-title>
+
+                        <v-list-item-subtitle>
+                          {{ gameObj.gamePath }}
+                        </v-list-item-subtitle>
+                      </v-list-item>
+                    </v-list>
+                  </v-card-text>
+
+                  <v-divider></v-divider>
+
+                  <v-card-actions>
+                    <v-btn text="关闭" @click="scanDialog = false"></v-btn>
+
+                    <v-spacer></v-spacer>
+
+                    <v-btn color="surface-variant" text="导入" variant="flat" @click="importSteamGame"></v-btn>
+                  </v-card-actions>
+                </v-card>
+              </template>
+            </v-dialog>
           </div>
         </v-container>
       </v-main>
@@ -114,11 +164,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
+import throttle from 'lodash/throttle';
 import { usePrimaryConfigStore } from './stores/primaryConfig';
 import myRouter from '@/router';
+import type { SteamGame } from './types';
 
 const routerTitleConfig: { [key: string]: string } = {
   home: '主页',
@@ -126,60 +178,85 @@ const routerTitleConfig: { [key: string]: string } = {
   saveProfileDetail: '存档配置详情',
 };
 
+// const mainPageRoute: string[] = ['home', 'settings'];
 const mainPageRoute: string[] = ['home', 'settings'];
 
 const route = useRoute();
 const router = useRouter();
 
-const { mainConfig, saveList, globalSnackBar, globalSnackBarText, dateTimeFlag } = storeToRefs(usePrimaryConfigStore());
-const { changeSnackTextThenShow } = usePrimaryConfigStore();
+// const { mainConfig, saveList, globalSnackBar, globalSnackBarText, dateTimeFlag } = storeToRefs(usePrimaryConfigStore());
+const { mainConfig, saveList, globalSnackBar, globalSnackBarText, multiCheckMode } = storeToRefs(usePrimaryConfigStore());
+const { changeSnackTextThenShow, addSaveProfile } = usePrimaryConfigStore();
 
 const drawer = ref<boolean>(false);
-const dialog = ref<boolean>(false);
+const importExportDialog = ref<boolean>(false);
+const scanDialog = ref<boolean>(false);
+const scanCardLoading = ref<boolean>(false);
 
 const isMaximized = ref<boolean>(false);
 const currentPageTitle = ref<string>('主页');
 const navIcon = ref<string>('mdi-menu');
 const importExportType = ref<string>('mainConfig');
+const currentRouterName = ref<string>('home');
 
-const appBarMenuItems = ref([
-  {
-    icon: 'mdi-import',
-    action: 'import',
-    text: '导入'
-  },
-  {
-    icon: 'mdi-export',
-    action: 'export',
-    text: '导出'
-  }
-]);
+const windowHeight = ref<number>(0);
 
-if (mainConfig.value.autoBackupTime) {
-  const oldTime = dateTimeFlag.value ? dateTimeFlag.value : new Date();
-  const newTime = new Date();
+const importGameList = ref<Array<{ name: string, gamePath: string, savePath: string, id: string, checked: boolean }>>([]);
 
-  const timeDiff = newTime.getTime() - oldTime.getTime();
+// const appBarMenuItems = ref([
+//   {
+//     icon: 'mdi-import',
+//     action: 'import',
+//     text: '导入'
+//   },
+//   {
+//     icon: 'mdi-export',
+//     action: 'export',
+//     text: '导出'
+//   }
+// ]);
 
-  console.log(timeDiff / 3600);
+const throttledHandleResize = throttle(watchWindowResize, 200);
 
-  // setInterval(() => {
-  //   console.log('自动备份');
-  // }, mainConfig.value.autoBackupTime * 60 * 60 * 1000);
-}
+onMounted(() => {
+  windowHeight.value = window.innerHeight;
 
+  window.addEventListener('resize', throttledHandleResize);
+});
+
+// if (mainConfig.value.autoBackupTime) {
+//   const oldTime = dateTimeFlag.value ? dateTimeFlag.value : new Date();
+//   const newTime = new Date();
+
+//   const timeDiff = newTime.getTime() - oldTime.getTime();
+
+//   console.log(timeDiff / 3600);
+
+//   setInterval(() => {
+//     console.log('自动备份');
+//   }, mainConfig.value.autoBackupTime * 60 * 60 * 1000);
+// }
+
+// 监听主线程中窗口最大化/最小化
 window.electronAPI.onWindowChange((isMax: boolean) => {
   // console.log(isMax);
   isMaximized.value = isMax;
 });
 
+// 监听路由，判断路由地址是否处于第一层级，处于第一层级就展示主页图标，反之展示返回按钮
 myRouter.afterEach((to) => {
   // console.log(to);
   if (to.name) {
+    currentRouterName.value = to.name as string;
     navIcon.value = mainPageRoute.includes(to.name as string) ? 'mdi-menu' : 'mdi-arrow-left';
     currentPageTitle.value = routerTitleConfig[to.name as string];
   }
 });
+
+function watchWindowResize() {
+  windowHeight.value = window.innerHeight;
+  // console.log(window.innerWidth, window.innerHeight);
+}
 
 function navIconAction() {
   if (!mainPageRoute.includes(route.name as string)) {
@@ -189,27 +266,93 @@ function navIconAction() {
   }
 }
 
+// 扫描Steam已安装的游戏
 async function scanUserFolder() {
-  const res = await window.electronAPI.readFolder();
-  console.log(res);
+
+  scanDialog.value = true;
+  scanCardLoading.value = true;
+
+  importGameList.value = [];
+
+  const result = await window.electronAPI.getSteamGames();
+  if (result.success) {
+    // console.log(result.data);
+
+    (result.data as Array<SteamGame>).forEach((element: SteamGame) => {
+
+      if (saveList.value.find(save => save.name === element.name) === undefined) {
+        importGameList.value.push({
+          name: element.name,
+          gamePath: element.installDir,
+          savePath: element.savePath,
+          id: element.appId,
+          checked: false
+        });
+      }
+    });
+
+    scanCardLoading.value = false;
+  } else {
+    changeSnackTextThenShow(result.message);
+    console.error('Failed to fetch Steam games:', result.message);
+    scanCardLoading.value = false;
+  }
 }
 
+async function importSteamGame() {
+  const checkedGames = importGameList.value.filter(item => item.checked);
+
+  if (checkedGames) {
+    checkedGames.forEach(async element => {
+
+      let dirNameArr = element.gamePath.split('\\');
+
+      const saveProfile = {
+        id: '',
+        createTime: '',
+        name: element.name,
+        dirName: dirNameArr[dirNameArr.length - 1],
+        location: element.savePath,
+        isOnlyOverwrite: true,
+        historyBackupList: []
+      };
+
+      const res = await window.electronAPI.createFolder({ basePath: mainConfig.value.saveFolder, folderName: saveProfile.dirName });
+
+      if (res.success) {
+        addSaveProfile(saveProfile);
+      } else {
+        changeSnackTextThenShow(res.message);
+      }
+    });
+
+    changeSnackTextThenShow('导入成功');
+
+    scanDialog.value = false;
+
+  } else {
+    changeSnackTextThenShow('请至少选中一个');
+    // scanDialog.value = false;
+  }
+}
+
+// 应用栏菜单按钮事件
 async function appBarMenuAction(action: string) {
   switch (action) {
     case 'import': {
       const res = await window.electronAPI.readFile();
-      if (res === '操作已取消') {
-        changeSnackTextThenShow(res);
+      if (res.success) {
+        const importObj = JSON.parse(res.data as string);
+
+        if (importExportType.value === 'mainConfig') {
+          mainConfig.value = importObj;
+        } else {
+          saveList.value = [...saveList.value, ...importObj.saveList];
+        }
         return;
       }
 
-      const importObj = JSON.parse(res);
-
-      if (importExportType.value === 'mainConfig') {
-        mainConfig.value = importObj;
-      } else {
-        saveList.value = [...saveList.value, ...importObj.saveList];
-      }
+      changeSnackTextThenShow(res.message);
 
       break;
     }
@@ -219,7 +362,7 @@ async function appBarMenuAction(action: string) {
 
       // console.log(outputStr);
       const res = await window.electronAPI.writeFile(outputStr);
-      changeSnackTextThenShow(res);
+      changeSnackTextThenShow(res.message);
       break;
     }
   }

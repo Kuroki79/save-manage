@@ -6,7 +6,6 @@
 </template>
 
 <script setup lang="ts">
-import { withDefaults } from 'vue';
 
 withDefaults(defineProps<{ message: string, icon?: string, color?: string, iconSize?: string, fontSize?: string}>(), {
   message: '暂无数据',

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
-import { type SaveListInter, type SaveItemInter, type HistoryBackupInter } from '../types/index';
+import type { SaveListInter, SaveItemInter, HistoryBackupInter } from '../types/index';
 
 export const usePrimaryConfigStore = defineStore('primaryConfig', {
   state: () => ({
@@ -10,6 +10,7 @@ export const usePrimaryConfigStore = defineStore('primaryConfig', {
       saveFolder: '',
       autoBackupTime: 0
     },
+    multiCheckMode: false,
     dateTimeFlag: null as Date | null,
     saveList: [] as SaveListInter,
     globalSnackBarText: '' as string,

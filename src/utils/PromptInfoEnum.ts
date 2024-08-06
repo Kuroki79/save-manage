@@ -1,0 +1,36 @@
+export const enum PromptInfo {
+  // 文件操作
+  FILE_OP_CREATE_DIR_SUCCESS = '目录创建成功',
+  FILE_OP_CREATE_DIR_FAILED = '目录创建失败',
+  FILE_OP_DELETE_DIR_SUCCESS = '删除目录成功',
+  FILE_OP_DELETE_DIR_FAILED = '删除目录失败',
+  FILE_OP_DELETE_FILE_SUCCESS = '',
+  FILE_OP_DELETE_FILE_FAILED = '',
+  FILE_OP_RENAME_SUCCESS = '重命名成功',
+  FILE_OP_RENAME_FAILED = '重命名失败',
+  FILE_OP_MOVE_FAILED = '移动失败',
+  FILE_OP_COPY_IN_PROGRESS = '',
+  FILE_OP_READ_ERROR = '读取错误',
+  FILE_OP_WRITE_FILE_SUCCESS = '写入文件成功',
+  FILE_OP_WRITE_FILE_FAILED = '写入文件失败',
+  FILE_OP_WRITE_PERMISSION_DENIED = '',
+
+  FILE_OP_SELECT_DIR_SUCCESS = '选择目录成功',
+  FILE_OP_SELECT_DIR_FAILED = '选择目录失败',
+  FILE_OP_READ_FILE_SUCCESS = '读取文件成功',
+  FILE_OP_READ_FILE_FAILED = '读取文件失败',
+  FILE_OP_READ_DIR_SUCCESS = '读取目录成功',
+  FILE_OP_READ_DIR_FAILED = '读取目录失败',
+
+  SCAN_OP_STEAM_LIBRARY_SUCCESS = '扫描Steam库成功',
+  SCAN_OP_STEAM_LIBRARY_FAILED = '扫描Steam库失败',
+
+  // 备份相关
+  BACKUP_OP_CREATE_SUCCESS = '创建备份成功',
+  BACKUP_OP_CREATE_FAIL = '创建备份失败',
+  BACKUP_OP_RESTORE_SUCCESS = '还原备份成功',
+  BACKUP_OP_RESTORE_FAIL = '还原备份失败',
+
+  // 通用
+  COMMON_ACTION_CANCEL = '操作已取消'
+}

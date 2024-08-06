@@ -1,34 +1,38 @@
+import type { ipcReturnMsg } from "@/types";
+
 // electron-env.d.ts
 export interface IElectronAPI {
   // preload.ts 中使用的方法，此处也要同步申明
   windowAction: (arg: string) => void;
-  selectFolder: () => Promise<string>;
+  selectFolder: () => Promise<ipcReturnMsg>;
   renameAction: (arg: { 
     basePath: string; 
     oldName: string; 
     newName: string 
-  }) => Promise<string>;
+  }) => Promise<ipcReturnMsg>;
   createFolder: (arg: { 
     basePath: string; 
     folderName: string 
-  }) => Promise<string>;
+  }) => Promise<ipcReturnMsg>;
   createBackup: (arg: { 
     createTime: string, 
     basePath: string, 
     targetFolderName: string, 
     sourcePath: string 
-  }) => Promise<string>;
+  }) => Promise<ipcReturnMsg>;
   restoreBackup: (arg: { 
     createTime: string, 
     basePath: string, 
     folderName: string, 
     destination: string, 
     isOnlyOverwrite: boolean 
-  }) => Promise<string>;
-  deleteFolder: (arg: string[]) => Promise<string>,
-  readFile: () => Promise<string>,
-  readFolder: () => Promise<string>,
-  writeFile: (arg: string) => Promise<string>,
+  }) => Promise<ipcReturnMsg>;
+  deleteFolder: (arg: string[]) => Promise<ipcReturnMsg>,
+  readFile: () => Promise<ipcReturnMsg>,
+  readFolder: () => Promise<ipcReturnMsg>,
+  writeFile: (arg: string) => Promise<ipcReturnMsg>,
+
+  getSteamGames: () => Promise<ipcReturnMsg>,
   
   onWindowChange: (callback: Function) => void
 }

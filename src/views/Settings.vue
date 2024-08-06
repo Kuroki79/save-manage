@@ -41,33 +41,33 @@ const baseConfig = reactive({
   saveFolder: mainConfig.value.saveFolder
 });
 
-const autoBackupSelect = [
-  {
-    title: '关闭',
-    value: 0
-  },
-  {
-    title: '6小时',
-    value: 6
-  },
-  {
-    title: '12小时',
-    value: 12
-  },
-  {
-    title: '1天',
-    value: 24
-  },
-  {
-    title: '一周',
-    value: 168
-  }
-];
+// const autoBackupSelect = [
+//   {
+//     title: '关闭',
+//     value: 0
+//   },
+//   {
+//     title: '6小时',
+//     value: 6
+//   },
+//   {
+//     title: '12小时',
+//     value: 12
+//   },
+//   {
+//     title: '1天',
+//     value: 24
+//   },
+//   {
+//     title: '一周',
+//     value: 168
+//   }
+// ];
 
 async function selectFolder() {
-  const filePath = await window.electronAPI.selectFolder();
-  if (filePath) {
-    baseConfig.saveFolder = filePath;
+  const res = await window.electronAPI.selectFolder();
+  if (res.data) {
+    baseConfig.saveFolder = res.data as string;
   }
 }
 

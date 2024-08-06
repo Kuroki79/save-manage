@@ -1,26 +1,66 @@
 <template>
   <v-card v-if="saveList.length !== 0" class="mx-auto">
-    <v-list lines="two">
-      <v-list-item v-for="item in saveList" :key="item.id" :title="item.name" :subtitle="item.location">
-        <template v-slot:prepend>
-          <v-avatar :color="mainConfig.themeColor">
+    <v-list select-strategy="classic" lines="two" @update:selected="updateListSelected">
+      <v-list-item v-for="item in saveList" :key="item.id" :value="item" :title="item.name" :subtitle="item.location">
+        <template v-slot:prepend="{ isActive }">
+          <Transition name="slide-fade">
+            <v-list-item-action v-if="multiCheckMode" start>
+              <v-checkbox-btn :model-value="isActive"></v-checkbox-btn>
+            </v-list-item-action>
+          </Transition>
+
+          <v-avatar class="list-avatar" :color="mainConfig.themeColor">
             <v-icon color="white">mdi-gamepad-variant</v-icon>
           </v-avatar>
         </template>
 
         <template v-slot:append>
-          <v-btn @click="() => toProfileDetail(item.id)" :color="mainConfig.themeColor" icon="mdi-information"
-            variant="text"></v-btn>
+          <v-btn v-if="!multiCheckMode" @click="() => toProfileDetail(item.id)" :color="mainConfig.themeColor"
+            icon="mdi-information" variant="text"></v-btn>
         </template>
       </v-list-item>
     </v-list>
   </v-card>
   <placeholding-message message="暂无存档配置" v-else />
 
+  <div class="control-area">
+    <v-tooltip text="删除存档配置">
+      <template v-slot:activator="{ props }">
+        <Transition name="slide-fade">
+          <v-btn v-if="multiCheckMode" v-bind="props" @click="confirmDialog = true" color="red-darken-2"
+            icon="mdi-delete"></v-btn>
+        </Transition>
+      </template>
+    </v-tooltip>
+    <v-tooltip text="新建配置">
+      <template v-slot:activator="{ props }">
+        <v-btn @click="dialog = true" v-bind="props" :color="mainConfig.themeColor" icon="mdi-plus"></v-btn>
+      </template>
+    </v-tooltip>
+
+  </div>
+
+  <v-dialog v-model="confirmDialog" persistent width="auto">
+    <v-card>
+      <v-card-title>
+        确认删除存档配置？
+      </v-card-title>
+      <v-card-text>
+        <v-checkbox v-model="isDeleteFile" label="是否删除本地文件"></v-checkbox>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn :color="mainConfig.themeColor" variant="text" @click="confirmDialog = false">
+          否
+        </v-btn>
+        <v-btn color="red-darken-2" variant="text" @click="deleteProfile">
+          是
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <v-dialog v-model="dialog" persistent width="1024">
-    <template v-slot:activator="{ props }">
-      <v-btn class="add-btn" v-bind="props" :color="mainConfig.themeColor" icon="mdi-plus"></v-btn>
-    </template>
     <v-card title="新建配置">
       <template v-slot:prepend>
         <v-icon :color="mainConfig.themeColor" icon="mdi-content-save-plus"></v-icon>
@@ -69,16 +109,17 @@
 import { ref, reactive } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
-import { type SaveItemInter } from '../types/index';
+import { type SaveItemInter, type SaveListInter } from '../types/index';
 import { usePrimaryConfigStore } from '../stores/primaryConfig';
 import PlaceholdingMessage from '@/components/placeholdingMessage.vue';
 
 const router = useRouter();
 
-const { mainConfig, saveList } = storeToRefs(usePrimaryConfigStore());
-const { addSaveProfile, changeSnackTextThenShow } = usePrimaryConfigStore();
+const { mainConfig, saveList, multiCheckMode } = storeToRefs(usePrimaryConfigStore());
+const { addSaveProfile, changeSnackTextThenShow, deleteSaveProfile } = usePrimaryConfigStore();
 
 const profileForm = ref();
+const listSelected = ref<SaveListInter>([]);
 
 const initialProfile = (): SaveItemInter => ({
   id: '',
@@ -90,14 +131,17 @@ const initialProfile = (): SaveItemInter => ({
   isOnlyOverwrite: true
 });
 
+const confirmDialog = ref<boolean>(false);
+const isDeleteFile = ref<boolean>(false);
+
 let dialog = ref<boolean>(false);
 
 let newProfileConfig = reactive<SaveItemInter>(initialProfile());
 
 async function selectBackupFolder() {
-  const filePath = await window.electronAPI.selectFolder();
-  if (filePath) {
-    newProfileConfig.location = filePath;
+  const res = await window.electronAPI.selectFolder();
+  if (res.success) {
+    newProfileConfig.location = res.data as string;
   }
 }
 
@@ -109,15 +153,36 @@ async function saveNewProfile() {
 
   newProfileConfig.dirName = newProfileConfig.dirName.length !== 0 ? newProfileConfig.dirName : newProfileConfig.name;
 
-  const msg = await window.electronAPI.createFolder({ basePath: mainConfig.value.saveFolder, folderName: newProfileConfig.dirName });
+  const res = await window.electronAPI.createFolder({ basePath: mainConfig.value.saveFolder, folderName: newProfileConfig.dirName });
 
-  changeSnackTextThenShow(msg);
-
-  if (msg === '文件夹创建成功') {
+  if (res.success) {
     addSaveProfile(newProfileConfig);
     Object.assign(newProfileConfig, initialProfile());
     dialog.value = false;
   }
+
+  changeSnackTextThenShow(res.message);
+}
+
+async function deleteProfile() {
+  listSelected.value.forEach(async element => {
+    if (isDeleteFile.value) {
+      const res = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, element.dirName]);
+
+      if (!res.success) {
+        changeSnackTextThenShow(res.message);
+        return;
+      };
+    }
+
+    deleteSaveProfile(element.id);
+  });
+
+  confirmDialog.value = false;
+}
+
+function updateListSelected(arr: unknown) {
+  listSelected.value = arr as SaveListInter;
 }
 
 function toProfileDetail(id: string) {
@@ -132,9 +197,52 @@ function toProfileDetail(id: string) {
 </script>
 
 <style scoped>
-.add-btn {
+.control-area {
   position: absolute;
-  right: 20px;
+  right: 32px;
   bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.control-area button {
+  margin: 10px 0;
+}
+
+.list-avatar{
+  transition: all .2s ease-in-out;
+}
+
+.v-list-item .v-list-item__overlay {
+  background: transparent !important;
+}
+
+.v-list-item--variant-text .v-list-item__overlay {
+  background: transparent !important;
+}
+
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  /* transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1); */
+  transition: all 0.3s ease-in;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
+
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
 }
 </style>

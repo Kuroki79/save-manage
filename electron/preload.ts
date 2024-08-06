@@ -31,6 +31,7 @@ const exposeActions: IElectronAPI = {
   readFile: () => ipcRenderer.invoke('exploreAction:readFile'),
   readFolder: () => ipcRenderer.invoke('exploreAction:readFolder'),
   writeFile: (arg: string) => ipcRenderer.invoke('exploreAction:writeFile', arg),
+  getSteamGames: () => ipcRenderer.invoke('scanAction:getSteamGames'),
 
   onWindowChange: (callback: Function) => ipcRenderer.on('window:change', (_event, value) => callback(value)),
 };
