@@ -90,6 +90,16 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle('scanAction:getUserFolderSaveList', async (e, arg): Promise<ipcReturnMsg> => {
+    try {
+      const games = await getUserFolderSaveList(arg);
+      return { success: true, data: games, message: PromptInfo.SCAN_OP_STEAM_LIBRARY_SUCCESS };
+    } catch (error: any) {
+      console.error('Failed to get Steam games:', error);
+      return { success: false, message: error.message };
+    }
+  });
+
   // 创建目录
   ipcMain.handle('exploreAction:createFolder', (e, arg): ipcReturnMsg => {
     try {

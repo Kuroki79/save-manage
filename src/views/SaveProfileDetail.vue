@@ -3,36 +3,41 @@
     <template v-slot:prepend>
       <v-icon :color="mainConfig.themeColor" icon="mdi-content-save-edit"></v-icon>
     </template>
-    <v-card-text>
-      <v-container>
-        <v-row>
-          <v-col cols="12">
-            <v-text-field v-model="newProfileConfig.name" label="配置名称"></v-text-field>
-          </v-col>
-          <v-col cols="12">
-            <v-text-field v-model="newProfileConfig.dirName" hint="修改该值后保存会影响到目录名称" persistent-hint
-              label="备份文件夹名称"></v-text-field>
-          </v-col>
-          <v-col cols="12">
-            <v-text-field v-model="newProfileConfig.location" label="存档路径" @click:control="selectBackupFolder"
-              readonly></v-text-field>
-          </v-col>
-          <v-col cols="12" sm="8" md="6">
-            <v-switch :color="mainConfig.themeColor" v-model="newProfileConfig.isOnlyOverwrite"
-              :label="`存档还原方式：${newProfileConfig.isOnlyOverwrite ? '仅覆盖' : '清空目录后覆盖'}`"></v-switch>
-          </v-col>
-        </v-row>
-      </v-container>
-    </v-card-text>
+    <v-form validate-on="blur" @submit.prevent>
+      <v-card-text>
+        <v-container>
+          <v-row>
+            <v-col cols="12">
+              <v-text-field v-model="newProfileConfig.name" label="配置名称"></v-text-field>
+            </v-col>
+            <v-col cols="12">
+              <v-text-field v-model="newProfileConfig.dirName" hint="修改该值后保存会影响到目录名称" persistent-hint
+                label="备份文件夹名称"></v-text-field>
+            </v-col>
+            <v-col cols="12">
+              <v-text-field v-model="newProfileConfig.location" label="存档路径" @click:control="selectBackupFolder"
+                readonly></v-text-field>
+            </v-col>
+            <v-col cols="12" sm="8" md="6">
+              <v-switch :color="mainConfig.themeColor" v-model="newProfileConfig.isOnlyOverwrite"
+                :label="`存档还原方式：${newProfileConfig.isOnlyOverwrite ? '仅覆盖' : '清空目录后覆盖'}`"></v-switch>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-card-text>
 
-    <v-divider></v-divider>
+      <v-divider></v-divider>
 
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn :color="mainConfig.themeColor" variant="tonal" @click="saveProfile">
-        保存
-      </v-btn>
-    </v-card-actions>
+      <v-card-actions>
+        <Transition name="slide-fade">
+          <span v-if="!isProfileSave" class="ml-4 text-orange-darken-1">配置有改动，但尚未保存。</span>
+        </Transition>
+        <v-spacer></v-spacer>
+        <v-btn type="submit" :color="mainConfig.themeColor" variant="tonal" @click="saveProfile">
+          保存
+        </v-btn>
+      </v-card-actions>
+    </v-form>
   </v-card>
   <v-card class="mt-4">
     <v-card-title>
@@ -103,7 +108,7 @@
       </v-list-item>
     </v-list>
 
-    <placeholding-message message="暂无历史备份" icon-size="48" font-size="20px" v-else />
+    <v-empty-state v-else icon="mdi-alert-circle" title="暂无历史备份"></v-empty-state>
   </v-card>
   <div class="control-area">
     <!-- <v-tooltip text="删除存档配置">
@@ -167,14 +172,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, mergeProps } from 'vue';
+import { ref, reactive, watch, mergeProps } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import { storeToRefs } from 'pinia';
 import cloneDeep from 'lodash/cloneDeep';
+import isEqual from 'lodash/isEqual';
 import { type SaveItemInter } from '../types/index';
 import { usePrimaryConfigStore } from '../stores/primaryConfig';
-import PlaceholdingMessage from '@/components/placeholdingMessage.vue';
 import { parseCustomDate } from '@/utils/tools';
 
 const route = useRoute();
@@ -197,6 +202,8 @@ const isDeleteFile = ref<boolean>(false);
 
 const noteEditMenu = ref<boolean>(false);
 
+const isProfileSave = ref<boolean>(true);
+
 const backupNote = ref<string>('');
 
 const noteEditText = ref<string>('');
@@ -206,6 +213,10 @@ const targetProfileIndex: number = saveList.value.findIndex(item => item.id === 
 const initialProfile = (): SaveItemInter => (cloneDeep(saveList.value[targetProfileIndex]));
 
 let newProfileConfig = reactive<SaveItemInter>(initialProfile());
+
+watch(newProfileConfig, (oldValue, newValue) => {
+  isProfileSave.value = isEqual(saveList.value[targetProfileIndex], newValue);
+}, { deep: true });
 
 async function selectBackupFolder() {
   const res = await window.electronAPI.selectFolder();
@@ -221,7 +232,7 @@ async function saveProfile() {
   saveList.value[targetProfileIndex].name = newProfileConfig.name;
   saveList.value[targetProfileIndex].location = newProfileConfig.location;
 
-  console.log(saveList.value[targetProfileIndex].dirName, newProfileConfig.dirName);
+  // console.log(saveList.value[targetProfileIndex].dirName, newProfileConfig.dirName);
   if (saveList.value[targetProfileIndex].dirName !== newProfileConfig.dirName) {
     const res = await window.electronAPI.renameAction({ basePath: mainConfig.value.saveFolder, oldName: saveList.value[targetProfileIndex].dirName, newName: newProfileConfig.dirName });
 
@@ -234,10 +245,17 @@ async function saveProfile() {
 
   saveList.value[targetProfileIndex].isOnlyOverwrite = newProfileConfig.isOnlyOverwrite;
 
+  isProfileSave.value = true;
+
   changeSnackTextThenShow('配置已保存');
 }
 
 async function createNewBackup() {
+  if (newProfileConfig.location.length === 0) {
+    changeSnackTextThenShow('请先指定存档路径');
+    return;
+  }
+
   const createTime = dayjs().format('YYYYMMDD HHmmss');
 
   const res = await window.electronAPI.createBackup({
@@ -276,7 +294,7 @@ function editBackupNote(createTime: string) {
   noteEditText.value = '';
 }
 
-function returnFormatDate (dateStr: string) {
+function returnFormatDate(dateStr: string) {
   return dayjs(parseCustomDate(dateStr)).format('YYYY年MM月DD日 HH:mm:ss');
 }
 
@@ -316,5 +334,20 @@ async function deleteProfile() {
 
 .control-area button {
   margin: 10px 0;
+}
+
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  /* transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1); */
+  transition: all 0.3s ease-in;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
 }
 </style>

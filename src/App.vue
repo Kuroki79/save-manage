@@ -22,7 +22,7 @@
           <v-tooltip text="多选">
             <template v-slot:activator="{ props }">
               <v-btn v-if="currentRouterName === 'home'" v-bind="props" icon="mdi-checkbox-multiple-outline"
-            @click="multiCheckMode = !multiCheckMode"></v-btn>
+                @click="multiCheckMode = !multiCheckMode"></v-btn>
             </template>
           </v-tooltip>
 
@@ -45,22 +45,21 @@
               </v-list-item>
 
               <v-list-subheader>功能</v-list-subheader>
+              <v-list-item @click="scanSteamGames">
+                <template v-slot:prepend>
+                  <v-icon :color="mainConfig.themeColor" icon="mdi-magnify-scan"></v-icon>
+                </template>
+
+                <v-list-item-title>导入Steam游戏</v-list-item-title>
+              </v-list-item>
+
               <v-list-item @click="scanUserFolder">
                 <template v-slot:prepend>
                   <v-icon :color="mainConfig.themeColor" icon="mdi-magnify-scan"></v-icon>
                 </template>
 
-                <v-list-item-title>扫描游戏目录</v-list-item-title>
+                <v-list-item-title>扫描常用存档路径</v-list-item-title>
               </v-list-item>
-
-              <!-- <v-list-item v-for="(item, i) in appBarMenuItems" :key="i" :value="item"
-              @click="() => appBarMenuAction(item.action)">
-              <template v-slot:prepend>
-                <v-icon :color="mainConfig.themeColor" :icon="item.icon"></v-icon>
-              </template>
-
-              <v-list-item-title>{{ item.text }}</v-list-item-title>
-            </v-list-item> -->
             </v-list>
           </v-menu>
         </template>
@@ -115,7 +114,7 @@
                 </v-form>
               </v-card>
             </v-dialog>
-            <v-dialog v-model="scanDialog" min-width="600px" width="auto" scrollable>
+            <v-dialog v-model="scanSteamDialog" min-width="600px" width="auto" scrollable>
               <template v-slot:default>
                 <v-card :loading="scanCardLoading" prepend-icon="mdi-application-import" title="导入Steam游戏">
                   <template v-slot:loader="{ isActive }">
@@ -124,13 +123,11 @@
                   </template>
                   <v-card-text class="px-4" :style="{ height: windowHeight - 200 + 'px' }">
                     <v-list lines="two" density="compact">
-                      <v-list-subheader inset>绿色：已录入存档路径；黄色：未录入存档路径。</v-list-subheader>
                       <v-list-item v-for="gameObj in importGameList" :key="gameObj.id"
                         @click="gameObj.checked = !gameObj.checked">
                         <template v-slot:prepend>
                           <v-list-item-action start>
-                            <v-checkbox-btn :color="gameObj.savePath.length !== 0 ? 'success' : 'warning'"
-                              :model-value="gameObj.checked"
+                            <v-checkbox-btn :model-value="gameObj.checked"
                               @update:model-value="gameObj.checked = $event"></v-checkbox-btn>
                           </v-list-item-action>
                         </template>
@@ -147,11 +144,50 @@
                   <v-divider></v-divider>
 
                   <v-card-actions>
-                    <v-btn text="关闭" @click="scanDialog = false"></v-btn>
+                    <v-btn text="关闭" @click="scanSteamDialog = false"></v-btn>
 
                     <v-spacer></v-spacer>
 
                     <v-btn color="surface-variant" text="导入" variant="flat" @click="importSteamGame"></v-btn>
+                  </v-card-actions>
+                </v-card>
+              </template>
+            </v-dialog>
+            <v-dialog v-model="scanUserDialog" min-width="600px" width="auto" scrollable>
+              <template v-slot:default>
+                <v-card :loading="scanCardLoading" prepend-icon="mdi-application-import" title="导入Steam游戏">
+                  <template v-slot:loader="{ isActive }">
+                    <v-progress-linear :active="isActive" color="deep-purple" height="4"
+                      indeterminate></v-progress-linear>
+                  </template>
+                  <v-card-text class="px-4" :style="{ height: windowHeight - 200 + 'px' }">
+                    <v-list lines="two" density="compact">
+                      <v-list-item v-for="gameObj in userFolderSaveList" :key="gameObj.id"
+                        @click="gameObj.checked = !gameObj.checked">
+                        <template v-slot:prepend>
+                          <v-list-item-action start>
+                            <v-checkbox-btn :model-value="gameObj.checked"
+                              @update:model-value="gameObj.checked = $event"></v-checkbox-btn>
+                          </v-list-item-action>
+                        </template>
+
+                        <v-list-item-title>{{ gameObj.name }}</v-list-item-title>
+
+                        <v-list-item-subtitle>
+                          {{ gameObj.savePath }}
+                        </v-list-item-subtitle>
+                      </v-list-item>
+                    </v-list>
+                  </v-card-text>
+
+                  <v-divider></v-divider>
+
+                  <v-card-actions>
+                    <v-btn text="关闭" @click="scanUserDialog = false"></v-btn>
+
+                    <v-spacer></v-spacer>
+
+                    <v-btn color="surface-variant" text="导入" variant="flat" @click="scanUserFolder"></v-btn>
                   </v-card-actions>
                 </v-card>
               </template>
@@ -190,7 +226,8 @@ const { changeSnackTextThenShow, addSaveProfile } = usePrimaryConfigStore();
 
 const drawer = ref<boolean>(false);
 const importExportDialog = ref<boolean>(false);
-const scanDialog = ref<boolean>(false);
+const scanSteamDialog = ref<boolean>(false);
+const scanUserDialog = ref<boolean>(false);
 const scanCardLoading = ref<boolean>(false);
 
 const isMaximized = ref<boolean>(false);
@@ -202,6 +239,7 @@ const currentRouterName = ref<string>('home');
 const windowHeight = ref<number>(0);
 
 const importGameList = ref<Array<{ name: string, gamePath: string, savePath: string, id: string, checked: boolean }>>([]);
+const userFolderSaveList = ref<Array<{ name: string, savePath: string, id: string, checked: boolean }>>([]);
 
 // const appBarMenuItems = ref([
 //   {
@@ -266,10 +304,10 @@ function navIconAction() {
   }
 }
 
-// 扫描Steam已安装的游戏
+// 扫描系统用户目录
 async function scanUserFolder() {
 
-  scanDialog.value = true;
+  scanUserDialog.value = true;
   scanCardLoading.value = true;
 
   importGameList.value = [];
@@ -284,7 +322,40 @@ async function scanUserFolder() {
         importGameList.value.push({
           name: element.name,
           gamePath: element.installDir,
-          savePath: element.savePath,
+          savePath: '',
+          id: element.appId,
+          checked: false
+        });
+      }
+    });
+
+    scanCardLoading.value = false;
+  } else {
+    changeSnackTextThenShow(result.message);
+    console.error('Failed to fetch Steam games:', result.message);
+    scanCardLoading.value = false;
+  }
+}
+
+// 扫描Steam已安装的游戏
+async function scanSteamGames() {
+
+  scanSteamDialog.value = true;
+  scanCardLoading.value = true;
+
+  importGameList.value = [];
+
+  const result = await window.electronAPI.getSteamGames();
+  if (result.success) {
+    // console.log(result.data);
+
+    (result.data as Array<SteamGame>).forEach((element: SteamGame) => {
+
+      if (saveList.value.find(save => save.name === element.name) === undefined) {
+        importGameList.value.push({
+          name: element.name,
+          gamePath: element.installDir,
+          savePath: '',
           id: element.appId,
           checked: false
         });

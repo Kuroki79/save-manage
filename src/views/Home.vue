@@ -21,7 +21,8 @@
       </v-list-item>
     </v-list>
   </v-card>
-  <placeholding-message message="暂无存档配置" v-else />
+
+  <v-empty-state v-else headline="暂无存档配置" icon="mdi-alert-circle"></v-empty-state>
 
   <div class="control-area">
     <v-tooltip text="删除存档配置">
@@ -111,7 +112,6 @@ import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { type SaveItemInter, type SaveListInter } from '../types/index';
 import { usePrimaryConfigStore } from '../stores/primaryConfig';
-import PlaceholdingMessage from '@/components/placeholdingMessage.vue';
 
 const router = useRouter();
 
@@ -207,18 +207,6 @@ function toProfileDetail(id: string) {
 
 .control-area button {
   margin: 10px 0;
-}
-
-.list-avatar{
-  transition: all .2s ease-in-out;
-}
-
-.v-list-item .v-list-item__overlay {
-  background: transparent !important;
-}
-
-.v-list-item--variant-text .v-list-item__overlay {
-  background: transparent !important;
 }
 
 .slide-fade-enter-active {

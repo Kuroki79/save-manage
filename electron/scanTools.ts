@@ -6,7 +6,7 @@ import os from 'os';
 import { parse as parseVdf } from 'vdf-parser';
 
 import type { LibraryFolder, SteamGame } from '../src/types';
-import gameRules from '../src/utils/gameRules';
+import { getDirList } from './fileTools';
 
 const execAsync = promisify(exec);
 
@@ -78,21 +78,23 @@ async function getSteamGames(): Promise<SteamGame[]> {
         const manifestContent = await fs.promises.readFile(manifestPath, 'utf-8');
         const manifest = parseVdf(manifestContent) as any;
 
-        const targetRule = gameRules.find(item => item.name === manifest.AppState.name);
-
-        const savePath = targetRule ? targetRule.savePattern.replace('%USERPROFILE%', os.homedir()) : '';
-
         games.push({
           name: manifest.AppState.name,
           installDir: path.join(appsPath, 'common', manifest.AppState.installdir),
           appId: manifest.AppState.appid,
-          savePath
         });
       }
     }
   }
 
   return games;
+}
+
+async function getUserFolderSaveList (name: string) {
+  const appDataList: Array<string> = getDirList(path.join(os.homedir(), 'AppData'));
+  appDataList.forEach((element: string) => {
+    console.log(getDirList(path.join(os.homedir(), 'AppData', element)));
+  });
 }
 
 export {

@@ -37,7 +37,7 @@ export interface SteamGame {
   name: string;
   installDir: string;
   appId: string;
-  savePath: string
+  // savePath: string
 }
 
 export type SaveListInter = Array<SaveItemInter>;
