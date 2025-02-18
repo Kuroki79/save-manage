@@ -95,8 +95,11 @@ async function getUserFolderSaveList (name: string) {
   appDataList.forEach((element: string) => {
     console.log(getDirList(path.join(os.homedir(), 'AppData', element)));
   });
+
+  return [];
 }
 
 export {
-  getSteamGames
+  getSteamGames,
+  getUserFolderSaveList
 };

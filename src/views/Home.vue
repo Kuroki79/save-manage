@@ -1,3 +1,98 @@
+<script setup lang="ts">
+import { ref, reactive } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useRouter } from 'vue-router';
+import { type SaveItemInter, type SaveListInter } from '../types/index';
+import { usePrimaryConfigStore } from '../stores/primaryConfig';
+
+const router = useRouter();
+
+const { mainConfig, saveList, multiCheckMode } = storeToRefs(usePrimaryConfigStore());
+const { addSaveProfile, changeSnackTextThenShow, deleteSaveProfile } = usePrimaryConfigStore();
+
+const profileForm = ref();
+const listSelected = ref<SaveListInter>([]);
+
+const initialProfile = (): SaveItemInter => ({
+  id: '',
+  name: '',
+  dirName: '',
+  location: '',
+  createTime: '',
+  historyBackupList: [],
+  isOnlyOverwrite: true
+});
+
+const confirmDialog = ref<boolean>(false);
+const isDeleteFile = ref<boolean>(false);
+
+let dialog = ref<boolean>(false);
+
+let newProfileConfig = reactive<SaveItemInter>(initialProfile());
+
+async function selectBackupFolder() {
+  const res = await window.electronAPI.selectFolder();
+  if (res.success) {
+    newProfileConfig.location = res.data as string;
+  }
+}
+
+async function saveNewProfile() {
+  // 表单验证
+  const { valid } = await profileForm.value.validate();
+
+  if (!valid) return;
+
+  if (mainConfig.value.saveFolder.length === 0) {
+    changeSnackTextThenShow('请先在设置中指定备份存档路径');
+    return;
+  }
+
+  newProfileConfig.dirName = newProfileConfig.dirName.length !== 0 ? newProfileConfig.dirName : newProfileConfig.name;
+
+  const res = await window.electronAPI.createFolder({ basePath: mainConfig.value.saveFolder, folderName: newProfileConfig.dirName });
+
+  if (res.success) {
+    addSaveProfile(newProfileConfig);
+    Object.assign(newProfileConfig, initialProfile());
+    dialog.value = false;
+  }
+
+  changeSnackTextThenShow(res.message);
+}
+
+async function deleteProfile() {
+  for (const element of listSelected.value) {
+    if (isDeleteFile.value) {
+      const res = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, element.dirName]);
+
+      if (!res.success) {
+        changeSnackTextThenShow(res.message);
+        continue;
+      }
+    }
+
+    deleteSaveProfile(element.id);
+  }
+
+  confirmDialog.value = false;
+}
+
+function updateListSelected(arr: unknown) {
+  listSelected.value = arr as SaveListInter;
+}
+
+function toProfileDetail(id: string) {
+  router.push({
+    name: 'saveProfileDetail',
+    params: {
+      // query: {
+      id,
+    }
+  });
+}
+</script>
+
 <template>
   <v-card v-if="saveList.length !== 0" class="mx-auto">
     <v-list select-strategy="classic" lines="two" @update:selected="updateListSelected">
@@ -105,96 +200,6 @@
     </v-card>
   </v-dialog>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useRouter } from 'vue-router';
-import { type SaveItemInter, type SaveListInter } from '../types/index';
-import { usePrimaryConfigStore } from '../stores/primaryConfig';
-
-const router = useRouter();
-
-const { mainConfig, saveList, multiCheckMode } = storeToRefs(usePrimaryConfigStore());
-const { addSaveProfile, changeSnackTextThenShow, deleteSaveProfile } = usePrimaryConfigStore();
-
-const profileForm = ref();
-const listSelected = ref<SaveListInter>([]);
-
-const initialProfile = (): SaveItemInter => ({
-  id: '',
-  name: '',
-  dirName: '',
-  location: '',
-  createTime: '',
-  historyBackupList: [],
-  isOnlyOverwrite: true
-});
-
-const confirmDialog = ref<boolean>(false);
-const isDeleteFile = ref<boolean>(false);
-
-let dialog = ref<boolean>(false);
-
-let newProfileConfig = reactive<SaveItemInter>(initialProfile());
-
-async function selectBackupFolder() {
-  const res = await window.electronAPI.selectFolder();
-  if (res.success) {
-    newProfileConfig.location = res.data as string;
-  }
-}
-
-async function saveNewProfile() {
-  // 表单验证
-  const { valid } = await profileForm.value.validate();
-
-  if (!valid) return;
-
-  newProfileConfig.dirName = newProfileConfig.dirName.length !== 0 ? newProfileConfig.dirName : newProfileConfig.name;
-
-  const res = await window.electronAPI.createFolder({ basePath: mainConfig.value.saveFolder, folderName: newProfileConfig.dirName });
-
-  if (res.success) {
-    addSaveProfile(newProfileConfig);
-    Object.assign(newProfileConfig, initialProfile());
-    dialog.value = false;
-  }
-
-  changeSnackTextThenShow(res.message);
-}
-
-async function deleteProfile() {
-  listSelected.value.forEach(async element => {
-    if (isDeleteFile.value) {
-      const res = await window.electronAPI.deleteFolder([mainConfig.value.saveFolder, element.dirName]);
-
-      if (!res.success) {
-        changeSnackTextThenShow(res.message);
-        return;
-      };
-    }
-
-    deleteSaveProfile(element.id);
-  });
-
-  confirmDialog.value = false;
-}
-
-function updateListSelected(arr: unknown) {
-  listSelected.value = arr as SaveListInter;
-}
-
-function toProfileDetail(id: string) {
-  router.push({
-    name: 'saveProfileDetail',
-    params: {
-      // query: {
-      id,
-    }
-  });
-}
-</script>
 
 <style scoped>
 .control-area {

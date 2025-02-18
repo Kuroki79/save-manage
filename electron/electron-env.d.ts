@@ -33,6 +33,7 @@ export interface IElectronAPI {
   writeFile: (arg: string) => Promise<ipcReturnMsg>,
 
   getSteamGames: () => Promise<ipcReturnMsg>,
+  getUserFolderSaveList: () => Promise<ipcReturnMsg>,
   
   onWindowChange: (callback: Function) => void
 }

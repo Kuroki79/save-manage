@@ -13,7 +13,7 @@ import {
   writeFile
 } from './fileTools';
 
-import { getSteamGames } from './scanTools';
+import { getSteamGames, getUserFolderSaveList } from './scanTools';
 
 import { PromptInfo } from '../src/utils/PromptInfoEnum';
 import type { ipcReturnMsg } from '@/types';
@@ -93,7 +93,7 @@ app.whenReady().then(() => {
   ipcMain.handle('scanAction:getUserFolderSaveList', async (e, arg): Promise<ipcReturnMsg> => {
     try {
       const games = await getUserFolderSaveList(arg);
-      return { success: true, data: games, message: PromptInfo.SCAN_OP_STEAM_LIBRARY_SUCCESS };
+      return { success: true, data: games as string[], message: PromptInfo.SCAN_OP_STEAM_LIBRARY_SUCCESS };
     } catch (error: any) {
       console.error('Failed to get Steam games:', error);
       return { success: false, message: error.message };
